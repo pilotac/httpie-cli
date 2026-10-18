@@ -34,7 +34,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-html pytest-cov
           [ -f requirements.txt ] && pip install -r requirements.txt || true
-          [ -f pyproject.toml ] && pip install -e . || true
+          for f in requirements-dev.txt requirements-test.txt requirements_dev.txt requirements_test.txt requirements/dev.txt requirements/test.txt; do
+            [ -f "$f" ] && pip install -r "$f" || true
+          done
+          # The project itself with the extras its tests need (setup.py or pyproject.toml). pip installs the
+          # extras the project defines and only warns about the others.
+          if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
+            pip install -e ".[test,tests,testing,dev]" || pip install -e . || true
+          fi
 
       - name: Run unit tests
         run: |
@@ -56,7 +63,7 @@ jobs:
           fi
           pytest --html=unit-tests.html --self-contained-html \
                  --junitxml=pytest-junit.xml \
-                 $COV_ARGS --cov-report=html:coverage --cov-report=xml:coverage/cobertura.xml 2>/dev/null || TEST_EXIT=$?
+                 $COV_ARGS --cov-report=html:coverage --cov-report=xml:coverage/cobertura.xml || TEST_EXIT=$?
           [ "${TEST_EXIT:-0}" -eq 5 ] && TEST_EXIT=0
           [ -f unit-tests.html ] || echo "<html><body><h1>Unit Tests</h1><p>No tests yet — add pytest tests to get started.</p></body></html>" > unit-tests.html
           mkdir -p coverage
